@@ -74,6 +74,9 @@ export default injectIntl(withTracker(({ intl }) => {
 
     messages = ChatService.getPublicGroupMessages();
 
+    messages = ChatService.processBlockUserMessages(messages); 
+
+
     const time = currentUser.loginTime;
     const welcomeId = `welcome-msg-${time}`;
 

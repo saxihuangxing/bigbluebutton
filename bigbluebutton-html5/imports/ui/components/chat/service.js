@@ -137,11 +137,14 @@ const isChatLocked = (receiverID) => {
   const meeting = Meetings.findOne({ meetingId: Auth.meetingID },
     { fields: { 'lockSettingsProps.disablePublicChat': 1, 'lockSettingsProps.disablePrivateChat': 1 } });
   const user = Users.findOne({ meetingId: Auth.meetingID, userId: Auth.userID },
-    { fields: { locked: 1, role: 1 } });
+    { fields: { locked: 1, role: 1, blockPublicChat: 1} });
   const receiver = Users.findOne({ meetingId: Auth.meetingID, userId: receiverID },
     { fields: { role: 1 } });
   const isReceiverModerator = receiver && receiver.role === ROLE_MODERATOR;
 
+  if(user.blockPublicChat){
+    return true; 
+  }
   // disable private chat in breakouts
   if (meetingIsBreakout()) {
     return !isPublic;
@@ -159,6 +162,17 @@ const isChatLocked = (receiverID) => {
 
   return false;
 };
+
+const processBlockUserMessages = (messages) =>{
+  messages.forEach((message)=>{
+    const user = Users.findOne({ userId: message.sender });
+    if(user && user.blockPublicChat){
+      message.message = "message is blocked"; 
+      message.color = '0xff'; 
+    }
+  })
+  return messages; 
+}
 
 const hasUnreadMessages = (receiverID) => {
   const isPublic = receiverID === PUBLIC_CHAT_ID;
@@ -334,6 +348,7 @@ export default {
   getWelcomeProp,
   getScrollPosition,
   hasUnreadMessages,
+  processBlockUserMessages,
   lastReadMessageTime,
   isChatLocked,
   updateScrollPosition,

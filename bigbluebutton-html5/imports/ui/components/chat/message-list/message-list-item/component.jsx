@@ -55,11 +55,20 @@ class MessageListItem extends Component {
 
     if (!scrollArea && nextScrollArea) return true;
 
+    let messageChanged = false; 
     const hasNewMessage = messages.length !== nextMessages.length;
+    if(!hasNewMessage){
+      for(let i = 0;i<messages.length;i++){
+        if(messages[i].text !== nextMessages[i].text){
+          messageChanged = true; 
+          break; 
+        }
+      }
+    }
     const hasUserChanged = user && nextUser
       && (user.isModerator !== nextUser.isModerator || user.isOnline !== nextUser.isOnline);
 
-    return hasNewMessage || hasUserChanged;
+    return hasNewMessage || hasUserChanged || messageChanged;
   }
 
   renderSystemMessage() {

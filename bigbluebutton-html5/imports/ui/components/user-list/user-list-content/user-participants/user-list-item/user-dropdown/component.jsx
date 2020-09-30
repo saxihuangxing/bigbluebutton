@@ -96,6 +96,14 @@ const messages = defineMessages({
     id: 'app.userList.menu.lockUser.label',
     description: 'Lock a unlocked user',
   },
+  UnblockUserPulicChatLabel: {
+    id: 'app.userList.menu.unblockUserPulicChat.label',
+    description: 'UnBlock individual public chat',
+  },
+  BlockUserPulicChatLabel: {
+    id: 'app.userList.menu.blockUserPulicChat.label',
+    description: 'Block individual user public chat',
+  },
   DirectoryLookupLabel: {
     id: 'app.userList.menu.directoryLookup.label',
     description: 'Directory lookup',
@@ -128,6 +136,7 @@ const propTypes = {
   isThisMeetingLocked: PropTypes.bool.isRequired,
   getScrollContainerRef: PropTypes.func.isRequired,
   toggleUserLock: PropTypes.func.isRequired,
+  toggleUserPublicChatLock: PropTypes.func.isRequired,
 };
 const CHAT_ENABLED = Meteor.settings.public.chat.enabled;
 const ROLE_MODERATOR = Meteor.settings.public.user.role_moderator;
@@ -232,6 +241,7 @@ class UserDropdown extends PureComponent {
       lockSettingsProps,
       hasPrivateChatBetweenUsers,
       toggleUserLock,
+      toggleUserPublicChatLock,
       requestUserInformation,
       isMeteorConnected,
       userLocks,
@@ -256,6 +266,7 @@ class UserDropdown extends PureComponent {
       allowedToDemote,
       allowedToChangeStatus,
       allowedToChangeUserLockStatus,
+      allowedToLimitUserPublicChat,
     } = actionPermissions;
 
     const { disablePrivateChat } = lockSettingsProps;
@@ -384,6 +395,17 @@ class UserDropdown extends PureComponent {
         intl.formatMessage(messages.DemoteUserLabel),
         () => this.onActionsHide(changeRole(user.userId, 'VIEWER')),
         'user',
+      ));
+    }
+
+    if(allowedToLimitUserPublicChat && isMeteorConnected){
+      const blockPublicChat = user.blockPublicChat && user.role !== ROLE_MODERATOR;
+      actions.push(this.makeDropdownItem(
+        'unblockUserPublicChat',
+        blockPublicChat ? intl.formatMessage(messages.UnblockUserPulicChatLabel, { 0: user.name })
+          : intl.formatMessage(messages.BlockUserPulicChatLabel, { 0: user.name }),
+        () => this.onActionsHide(toggleUserPublicChatLock(user.userId, !blockPublicChat)),
+        blockPublicChat ? 'unlock' : 'lock',
       ));
     }
 

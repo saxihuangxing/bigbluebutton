@@ -27,6 +27,7 @@ export default withTracker(({ user }) => {
     toggleVoice: UserListService.toggleVoice,
     removeUser: UserListService.removeUser,
     toggleUserLock: UserListService.toggleUserLock,
+    toggleUserPublicChatLock: UserListService.toggleUserPublicChatLock,
     changeRole: UserListService.changeRole,
     assignPresenter: UserListService.assignPresenter,
     getAvailableActions: UserListService.getAvailableActions,

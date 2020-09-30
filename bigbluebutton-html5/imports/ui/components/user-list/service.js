@@ -363,6 +363,9 @@ const getAvailableActions = (amIModerator, isBreakoutRoom, subjectUser, subjectV
   const allowedToChangeUserLockStatus = amIModerator
     && !isSubjectUserModerator
     && isMeetingLocked(Auth.meetingID);
+  
+  const allowedToLimitUserPublicChat = amIModerator
+  && !isSubjectUserModerator; 
 
   return {
     allowedToChatPrivately,
@@ -375,6 +378,7 @@ const getAvailableActions = (amIModerator, isBreakoutRoom, subjectUser, subjectV
     allowedToDemote,
     allowedToChangeStatus,
     allowedToChangeUserLockStatus,
+    allowedToLimitUserPublicChat,
   };
 };
 
@@ -482,6 +486,10 @@ const toggleUserLock = (userId, lockStatus) => {
   makeCall('toggleUserLock', userId, lockStatus);
 };
 
+const toggleUserPublicChatLock = (userId, lockStatus) => {
+  makeCall('toggleUserPublicChatLock', userId, lockStatus);
+};
+
 const requestUserInformation = (userId) => {
   makeCall('requestUserInformation', userId);
 };
@@ -573,6 +581,7 @@ export default {
   getEmoji: () => Users.findOne({ userId: Auth.userID }, { fields: { emoji: 1 } }).emoji,
   hasPrivateChatBetweenUsers,
   toggleUserLock,
+  toggleUserPublicChatLock,
   requestUserInformation,
   isUserPresenter,
 };

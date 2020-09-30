@@ -72,6 +72,8 @@
     "app.userList.chatListItem.unreadPlural": "{0} New Messages",
     "app.userList.menu.chat.label": "Start a private chat",
     "app.userList.menu.clearStatus.label": "Clear status",
+    "app.userList.menu.blockUserPulicChat.label": "Block Public Chat",
+    "app.userList.menu.unblockUserPulicChat.label": "Unblock Public Chat",
     "app.userList.menu.removeUser.label": "Remove user",
     "app.userList.menu.removeConfirmation.label": "Remove user ({0})",
     "app.userlist.menu.removeConfirmation.desc": "Prevent this user from rejoining the session.",

@@ -5,6 +5,7 @@ import assignPresenter from './methods/assignPresenter';
 import changeRole from './methods/changeRole';
 import removeUser from './methods/removeUser';
 import toggleUserLock from './methods/toggleUserLock';
+import toggleUserPublicChatLock from './methods/toggleUserPublicChatLock'
 import setUserEffectiveConnectionType from './methods/setUserEffectiveConnectionType';
 import userActivitySign from './methods/userActivitySign';
 import userLeftMeeting from './methods/userLeftMeeting';
@@ -16,6 +17,7 @@ Meteor.methods({
   removeUser,
   validateAuthToken,
   toggleUserLock,
+  toggleUserPublicChatLock,
   setUserEffectiveConnectionType,
   userActivitySign,
   userLeftMeeting,
