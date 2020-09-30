@@ -77,7 +77,7 @@ class VideoService {
     this.SpeStreams = { // for specific videos
       maxVideo: 8,
       randomStreams: [],
-      randomSize: 2,
+      randomSize: 4,
     };
 
     this.updateNumberOfDevices = this.updateNumberOfDevices.bind(this);
@@ -310,12 +310,13 @@ class VideoService {
     const moderatorOnly = this.webcamsOnlyForModerator();
     if (moderatorOnly) streams = this.filterModeratorOnly(streams);
 
-    if (!this.amIModerator()) {
-      streams = this.filterActiveStreams(streams);
-    }
 
     const connectingStream = this.getConnectingStream(streams);
     if (connectingStream) streams.push(connectingStream);
+
+    if (!this.amIModerator()) {
+      streams = this.filterActiveStreams(streams);
+    }
 
     const mappedStreams = streams.map(vs => ({
       cameraId: vs.stream,
@@ -438,22 +439,14 @@ class VideoService {
   }
 
   filterActiveStreams(streams) {
-    // var switch = Session.get('swithVideo');
     const ActiveExpriredTime = 40 * 1000; // 20 seconds not speaking is deactive
+    const randomSwitchTime = 40 * 1000;
     if (!this.switchCamearInterval) {
       this.switchCamearInterval = setInterval(() => {
         Session.set('swithVideo', Date.now());
-        this.doSwitch = true;
-        console.log('hxtest , start swithVideo');
-      }, 60000);
+      }, 5 * 1000);
     }
-    let switchVideo = false;
     const swithVideoTime = Session.get('swithVideo');
-    if (this.doSwitch) { // if switchVideoTime is update in recent one second , then do switch
-      this.doSwitch = false;
-      switchVideo = true;
-    }
-    console.log(`hxtest , get switchVideo = ${switchVideo}`);
     const moderators = Users.find({ meetingId: Auth.meetingID, role: ROLE_MODERATOR })
       .fetch().map(user => user.userId);
     const presenter = Users.findOne({ meetingId: Auth.meetingID, presenter: true });
@@ -461,14 +454,10 @@ class VideoService {
     const selfAndPresent = [];
     const otherStreams = [];
     let resStreams = [];
-    const voiceUsers = VoiceUsers.find({ meetingId: Auth.meetingID, joined: true }).fetch();
+    const voiceUsers = VoiceUsers.find({ meetingId: Auth.meetingID, talking: true, joined: true }).fetch();
     const activeUsers = voiceUsers.filter((voiceUser) => {
-      let active = false; let notSelfOrPresenter = false; let
-        hasVideoStream = false;
-      if (voiceUser.talking || (voiceUser.endTime !== undefined
-          && Date.now() - voiceUser.endTime < ActiveExpriredTime)) {
-        active = true;
-      }
+      let notSelfOrPresenter = false;
+      let hasVideoStream = false;
       const isModerator = moderators.some((id) => {
         if (id === voiceUser.intId) {
           return true;
@@ -484,21 +473,10 @@ class VideoService {
           return true;
         }
       });
-      if (active && notSelfOrPresenter && hasVideoStream) {
+      if (notSelfOrPresenter && hasVideoStream) {
         return true;
       }
       return false;
-    });
-    activeUsers.sort((a, b) => {
-      if (!b.talking && a.talking) {
-        return -1;
-      }
-      if (!b.talking && !a.talking) {
-        if (b.endTime < a.endTime) {
-          return -1;
-        }
-      }
-      return 0;
     });
     const activeStreams = activeUsers.map(item => item.stream);
 
@@ -515,13 +493,13 @@ class VideoService {
       if (isPresenter || isMe || isModerator) {
         selfAndPresent.push(stream);
       } else {
-        let flag = activeStreams.some((item) => {
-          if (item.userId === stream.userId) {
+        let flag = this.SpeStreams.randomStreams.some((item) => {
+          if (item && item.userId === stream.userId) {
             return true;
           }
         });
-        flag |= this.SpeStreams.randomStreams.some((item) => {
-          if (item.userId === stream.userId) {
+        flag |= activeStreams.some((item) => {
+          if (item && item.userId === stream.userId) {
             return true;
           }
         });
@@ -542,7 +520,39 @@ class VideoService {
       return 1;
     });
     resStreams = resStreams.concat(selfAndPresent);
-    resStreams = resStreams.concat(activeStreams);
+
+    for (let i = 0; i < this.SpeStreams.randomSize; i++) {
+      const random = this.SpeStreams.randomStreams[i];
+      if (random) {
+        const inResStreams = resStreams.some((stream) => {
+          if (stream.userId === random.userId) {
+            return true;
+          }
+        });
+        const inStreams = streams.some((stream) => {
+          if (stream.userId === random.userId) {
+            return true;
+          }
+        });
+
+        if (inResStreams || !inStreams) // if already in current return streams or stream not exist anymore,then delete it.
+        {
+          this.SpeStreams.randomStreams.splice(i, 1);
+          i--;
+          continue;
+        }
+        for (let i = 0; i < activeStreams.length; i++) {
+          const stream = activeStreams[i];
+          if (stream.userId === random.userId) {
+            activeStreams.splice(i, 1);
+            random.state = 'active'; // set stream to state to active and activeTime;
+            random.activeTime = Date.now();
+            break;
+          }
+        }
+      }
+    }
+
     const getRandomStream = (streams) => {
       if (streams.length === 0) {
         return;
@@ -552,43 +562,46 @@ class VideoService {
       streams.splice(index, 1);
       return stream;
     };
-    /* if(!this.SpeStreams.talkingStream){
-       let stream = getRandomStream(otherStreams);
-       if(stream){
-       this.SpeStreams.talkingStream = stream;
-       this.SpeStreams.talkingTime = Date.now();
-       }
-     }
 
-     if(this.SpeStreams.talkingStream){
-       resStreams.push(this.SpeStreams.talkingStream);
-     } */
     for (let i = 0; i < this.SpeStreams.randomSize; i++) {
-      if (this.SpeStreams.randomStreams[i]) {
-        if (resStreams.some((stream) => {
-          if (stream.userId === this.SpeStreams.randomStreams[i].userId) {
-            return true;
-          }
-        })) {
-          this.SpeStreams.randomStreams.splice(i, 1);
-          i--;
+      const random = this.SpeStreams.randomStreams[i];
+      let switchVideo = false;
+      if (random) {
+        if (random.state === 'active' && Date.now() - random.activeTime >= ActiveExpriredTime) {
+          switchVideo = true;
+        } else if (random.state === 'deactive' && activeStreams.length > 0) {
+          switchVideo = true;
+        } else if (Date.now() - random.switchTime > randomSwitchTime) {
+          switchVideo = true;
         }
       }
-    }
-
-    for (let i = 0; i < this.SpeStreams.randomSize; i++) {
-      if (!this.SpeStreams.randomStreams[i] || switchVideo) {
-        const stream = getRandomStream(otherStreams);
-        if (!stream) {
-          break;
+      if (!random || switchVideo) {
+        let stream;
+        if (activeStreams.length > 0) {
+          stream = activeStreams[0];
+          stream.state = 'active';
+          stream.activeTime = Date.now();
+          activeStreams.splice(0, 1);
+        } else {
+          stream = getRandomStream(otherStreams);
+          if (stream) {
+            stream.switchTime = Date.now();
+            stream.state = 'deactive';
+          }
         }
-        this.SpeStreams.randomStreams[i] = stream;
+        if (!stream) {
+          // this.SpeStreams.randomStreams[i].splice(i,1);
+          // i--;
+          // continue;
+        } else {
+          this.SpeStreams.randomStreams[i] = stream;
+        }
       }
     }
     resStreams = resStreams.concat(this.SpeStreams.randomStreams);
-    if (resStreams.length > this.SpeStreams.maxVideo) {
+    /*     if (resStreams.length > this.SpeStreams.maxVideo) {
       resStreams = resStreams.slice(0, this.SpeStreams.maxVideo);
-    }
+    } */
     console.log(`hxtest selfAndPresent = ${JSON.stringify(selfAndPresent)}`);
     console.log(`hxtest this.SpeStreams = ${JSON.stringify(this.SpeStreams)}`);
     console.log(`hxtest resStreams = ${JSON.stringify(resStreams)}`);
@@ -596,17 +609,6 @@ class VideoService {
       // return [];
     }
     return resStreams;
-
-    /*     return  streams.reduce((result, stream) => {
-       const { userId } = stream;
-
-       const isPresenter = presenterId === userId;
-       const isMe = Auth.userID === userId;
-
-       if (isPresenter || isMe) result.push(stream);
-
-       return result;
-     }, []); */
   }
 
 
